@@ -1,0 +1,39 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1791966044,
+        "narHash": "sha256-UwKRZKua8BOagYl0cou05BHtu7F6XV62FD2Hb+f0QYs=",
+        "rev": "319e4cebef10cbb636c6ea392137b52ad105336a",
+        "type": "tarball",
+        "url": "https://releases.nixos.org/nixpkgs/nixpkgs-26.11pre1092129.319e4cebef10/nixexprs.tar.zst"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "ref": "nixpkgs-unstable",
+        "type": "indirect"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs",
+        "src": "src"
+      }
+    },
+    "src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791886481,
+        "narHash": "sha256-GdesHVQIFW7DAyV5UD3arpOte32RZNZDkpHvYqxZM00=",
+        "type": "tarball",
+        "url": "https://superluminal.blob.core.windows.net/public-installers/SuperluminalLinux-1.0.7705.679-alpha.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://superluminal.blob.core.windows.net/public-installers/SuperluminalLinux-1.0.7705.679-alpha.tar.gz"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
