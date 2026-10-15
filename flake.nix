@@ -17,6 +17,33 @@
         inherit system;
         config.allowUnfree = true;
       };
+
+      runtimeDeps = with pkgs; [
+        stdenv.cc.cc.lib
+        glib
+        libglvnd
+        fontconfig
+        freetype
+        zlib
+        dbus
+        elfutils
+        gtk3
+        libxkbcommon
+        libx11
+        libxext
+        libxcb
+        libxcb-util
+        libxcb-image
+        libxcb-keysyms
+        libxcb-render-util
+        libxcb-wm
+      ];
+
+      fhsEnv = pkgs.buildFHSEnv {
+        name = "superluminal-fhs";
+        targetPkgs = _: runtimeDeps;
+        runScript = "bash";
+      };
     in
     {
       packages.${system}.default = pkgs.stdenv.mkDerivation {
@@ -25,31 +52,14 @@
 
         inherit src;
 
-        nativeBuildInputs = with pkgs; [
-          autoPatchelfHook
-          makeWrapper
-        ];
+        nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+        buildInputs = runtimeDeps;
 
-        buildInputs = with pkgs; [
-          stdenv.cc.cc.lib
-          glib
-          libglvnd
-          fontconfig
-          freetype
-          zlib
-          dbus
-          elfutils
-          gtk3
-          libxkbcommon
-          libx11
-          libxext
-          libxcb
-          libxcb-util
-          libxcb-image
-          libxcb-keysyms
-          libxcb-render-util
-          libxcb-wm
-        ];
+        # Superluminal and SuperluminalCmd must stay byte-identical to the signed
+        # originals: the capture service rejects connecting clients whose
+        # /proc/pid/exe fails .slsig signature verification. They are run through
+        # an FHS env wrapper instead of being patched.
+        dontAutoPatchelf = true;
 
         installPhase = ''
           runHook preInstall
@@ -60,24 +70,39 @@
 
         postInstall = ''
           mkdir -p $out/bin
-          for exe in Superluminal SuperluminalCmd SuperluminalCaptureService SuperluminalCrashReporter SuperluminalAutoUpdater; do
-            makeWrapper $out/lib/superluminal/$exe $out/bin/$exe \
-              --set QT_PLUGIN_PATH "$out/lib/superluminal/Qt/plugins"
+          for exe in Superluminal SuperluminalCmd; do
+            {
+              echo '#!${pkgs.runtimeShell}'
+              echo "export QT_PLUGIN_PATH=$out/lib/superluminal/Qt/plugins"
+              echo "exec ${fhsEnv}/bin/superluminal-fhs -c 'exec $out/lib/superluminal/$exe \"\$@\"' $exe \"\$@\""
+            } > $out/bin/$exe
+            chmod +x $out/bin/$exe
+          done
+          for exe in SuperluminalCaptureService SuperluminalCrashReporter SuperluminalAutoUpdater; do
+            ln -s $out/lib/superluminal/$exe $out/bin/$exe
           done
 
           install -Dm644 $out/lib/superluminal/Documentation/Superluminal/assets/img/logo.svg \
             $out/share/icons/hicolor/scalable/apps/superluminal.svg
 
           mkdir -p $out/share/applications
-          cat > $out/share/applications/superluminal.desktop <<EOF
-          [Desktop Entry]
-          Type=Application
-          Name=Superluminal
-          Comment=Performance profiler
-          Exec=Superluminal
-          Icon=superluminal
-          Categories=Development;
-          EOF
+          {
+            echo '[Desktop Entry]'
+            echo 'Type=Application'
+            echo 'Name=Superluminal'
+            echo 'Comment=Performance profiler'
+            echo 'Exec=Superluminal'
+            echo 'Icon=superluminal'
+            echo 'Categories=Development;'
+          } > $out/share/applications/superluminal.desktop
+        '';
+
+        postFixup = ''
+          mv $out/lib/superluminal/Superluminal $out/lib/superluminal/SuperluminalCmd "$TMPDIR"
+          autoPatchelf --no-recurse $out/lib/superluminal
+          addAutoPatchelfSearchPath $out/lib/superluminal
+          autoPatchelf $out/lib/superluminal/Qt $out/lib/superluminal/slPlugins
+          mv "$TMPDIR"/Superluminal "$TMPDIR"/SuperluminalCmd $out/lib/superluminal/
         '';
       };
     }
